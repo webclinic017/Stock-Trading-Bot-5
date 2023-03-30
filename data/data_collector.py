@@ -4,8 +4,7 @@ import requests
 import pandas as pd
 
 from tqdm import tqdm
-from typing import cast 
-from ..config.config import POLYGONE_SERVICE, FOLDER_STRUCTURE
+from config.config import POLYGONE_SERVICE, FOLDER_STRUCTURE
 
 
 def is_valid_time(row):
@@ -21,7 +20,7 @@ def fetch_data(ticker = 'ATHX', _range = '5', time_unit= 'minute', _from = '2022
     folder_path = f'{FOLDER_STRUCTURE.MAIN_FOLDER}/{_range}{time_unit}/{ticker}'
     pathlib.Path(folder_path).mkdir(parents=True, exist_ok=True) 
 
-    download_path = cast( str , POLYGONE_SERVICE.TICKER_LINK)
+    download_path = POLYGONE_SERVICE.TICKER_LINK.value
     download_path += f'{ticker}/range/{_range}/{time_unit}/{_from}/{_to}?adjusted=true&limit={POLYGONE_SERVICE.LIMIT}&apiKey={POLYGONE_SERVICE.API_KEY}'     
 
     try:

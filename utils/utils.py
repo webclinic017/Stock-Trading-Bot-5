@@ -5,22 +5,34 @@ import pandas as pd
 
 from typing import Dict
 from pytz import timezone
-from ..config.config import FOLDER_STRUCTURE
 from datetime import datetime
-from ..config.config import POLYGONE_SERVICE
+from config.config import FOLDER_STRUCTURE, POLYGONE_SERVICE
 
 
-def read_stock_data(file):
-    return pd.read_csv(file, index_col=0, parse_dates=True)
-
+def read_stock_data(file, to_numpy=True):
+    read_file = pd.read_csv(file, index_col=0, parse_dates=True)
+    return read_file.to_numpy() if to_numpy else read_file
+    
 def save_dataframe_as_csv(df, file_name):
     df.to_csv(file_name, index=False)
     
+def get_column_indices(dataframe, parameters):
+    column_indices = {}
+    for param in parameters:
+        if param in dataframe.columns:
+            column_indices[param] = dataframe.columns.get_loc(param)
+        else:
+            raise ValueError(f"Parameter '{param}' not found in DataFrame columns.")
+    return column_indices.values()
+
 # Generate reports
 def generate_reports(metrics, report_name):
     metrics_df = pd.DataFrame(metrics)
     metrics_df.to_csv(f'reports/{report_name}.csv', index=False)
     
+def extract_symbol_from_filename(filename):
+    return os.path.splitext(os.path.basename(filename))[0]
+
 def get_market_status() -> Dict[ str, str ]: 
     try:
         url = f'{POLYGONE_SERVICE.MARKET_STATUS}/now?apiKey={POLYGONE_SERVICE.API_KEY}'

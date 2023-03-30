@@ -6,3 +6,4 @@ config/config.py
 
 # Dont add these files for now on github 
 backtest/report.py
+output/*.csv

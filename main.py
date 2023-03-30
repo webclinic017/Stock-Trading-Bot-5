@@ -1,34 +1,38 @@
 import os
+import pandas as pd 
 
+from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
-from backtest.report import Report
 from config.config import FOLDER_STRUCTURE
-from typing import cast 
 from strategies.moving_average import MovingAverageCrossover 
-from utils.utils import read_stock_data, generate_reports, save_dataframe_as_csv
+from utils.utils import read_stock_data, extract_symbol_from_filename, save_dataframe_as_csv, get_column_indices
 
 # Apply strategy to stock
-def apply_strategy(stock_data, strategy_class, strategy_params):
-    strategy = strategy_class(stock_data, *strategy_params)
-    signals = strategy.generate_signals(stock_data)
+def apply_strategy(stock_data, strategy_class, strategy_params, symbol):
+    strategy = strategy_class(stock_data, *strategy_params, symbol)
+    signals = strategy.generate_signals()
     return signals
 
 def main():
-    stocks_folder = cast(str, FOLDER_STRUCTURE.STOCKS_MAIN_PATH )
+    stocks_folder = os.path.join(FOLDER_STRUCTURE.STOCKS_MAIN_PATH.value, '5mins_ta') 
+    stock_files = [os.path.join(stocks_folder, f) for f in os.listdir(stocks_folder) if f.endswith('.csv')][:10]
 
-    stock_files = [os.path.join(stocks_folder, f) for f in os.listdir(stocks_folder) if f.endswith('.csv')]
+    parameters = [ 'Close', 'EMA_9', 'EMA_20']
 
-    short_window = 'EMA_9'
-    long_window = 'EMA_20'
-    
-    strategy_params = (short_window, long_window)
+    test_df = pd.read_csv(stock_files[0], nrows=3)
+
+    close_price_idx, short_window_idx, long_window_idx = get_column_indices(test_df, parameters)
+    strategy_params = (close_price_idx, short_window_idx, long_window_idx)
 
     with ThreadPoolExecutor() as executor:
         # Read stock data in parallel
-        stock_data_list = list(executor.map(read_stock_data, stock_files))
+        stock_data_list = list(tqdm(executor.map(read_stock_data, stock_files)))
+
+        # Extract stock symbols from file names
+        symbols = [extract_symbol_from_filename(file) for file in stock_files]
 
         # Apply strategy to each stock in parallel
-        signals_list = list(executor.map(apply_strategy, stock_data_list, [MovingAverageCrossover]*len(stock_data_list), [strategy_params]*len(stock_data_list)))
+        stocks_analysis = list(tqdm(executor.map(apply_strategy, stock_data_list, [MovingAverageCrossover]*len(stock_data_list), [strategy_params]*len(stock_data_list), symbols), total=len(stock_data_list), desc="Applying strategy"))
 
         # Save DataFrames as CSV files in parallel
         output_folder = 'output'
@@ -36,8 +40,7 @@ def main():
             os.makedirs(output_folder)
         
         output_file_names = [os.path.join(output_folder, f'{os.path.splitext(os.path.basename(file))[0]}_signals.csv') for file in stock_files]
-        
-        list(executor.map(save_dataframe_as_csv, signals_list, output_file_names))
+        list(tqdm(executor.map(save_dataframe_as_csv, stocks_analysis, output_file_names)))
 
 if __name__ == '__main__':
     main()
