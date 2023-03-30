@@ -1,0 +1,8 @@
+# emails data, api data, folder structure
+config/config.py 
+
+# Remove these folders
+**/__pycache__/
+
+# Dont add these files for now on github 
+backtest/report.py
